@@ -120,6 +120,12 @@ const id = (prefix) =>
 function OutputCanvas({ output, stage = false }) {
   const theme = output?.theme || themes[0];
   const slide = output?.item?.slides?.[output.slideIndex] || null;
+  const [clock, setClock] = useState(() => new Date());
+  useEffect(() => {
+    if (!stage) return undefined;
+    const interval = setInterval(() => setClock(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, [stage]);
   return (
     <div
       className={`output-canvas ${stage ? "stage-view" : ""}`}
@@ -133,7 +139,7 @@ function OutputCanvas({ output, stage = false }) {
         <header className="stage-header">
           <span><Radio size={12} /> AO VIVO</span>
           <strong>{output?.item?.title || "Sem conteúdo"}</strong>
-          <time>{new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time>
+          <time>{clock.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time>
         </header>
       )}
       <div className="output-center">
@@ -144,8 +150,8 @@ function OutputCanvas({ output, stage = false }) {
           </div>
         ) : slide ? (
           <>
-            {output.item.kind === "image" && <img src={`file://${slide.path}`} alt="" />}
-            {output.item.kind === "video" && <video src={`file://${slide.path}`} autoPlay />}
+            {output.item.kind === "image" && <img src={slide.url || `file://${slide.path}`} alt="" />}
+            {output.item.kind === "video" && <video src={slide.url || `file://${slide.path}`} autoPlay playsInline />}
             {!["image", "video"].includes(output.item.kind) && (
               <div className="projected-text">
                 {output.item.kind === "bible" && <span>{slide.label}</span>}
@@ -331,6 +337,33 @@ function App() {
     return () => clearInterval(interval);
   }, [timerRunning]);
 
+  useEffect(() => {
+    function handleShortcut(event) {
+      const tag = event.target?.tagName?.toLowerCase();
+      if (["input", "textarea", "select"].includes(tag)) return;
+      if (event.key === "Enter") {
+        event.preventDefault();
+        takeLive();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setSelectedSlide((current) => Math.max(0, current - 1));
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setSelectedSlide((current) =>
+          Math.min((selectedItem?.slides.length || 1) - 1, current + 1));
+      } else if (event.key.toLowerCase() === "b") {
+        setBlackout((current) => !current);
+        setTimerVisible(false);
+      } else if (event.key === "Escape") {
+        setBlackout(false);
+        setTimerVisible(false);
+        setAlert("");
+      }
+    }
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  });
+
   const activePlaylist = state.playlists.find((p) => p.id === state.activePlaylistId) || state.playlists[0];
   const selectedItem = state.library.find((item) => item.id === selectedItemId) || null;
   const liveItem = state.library.find((item) => item.id === live?.itemId) || null;
@@ -383,6 +416,25 @@ function App() {
     setToast("Adicionado à programação");
   }
 
+  function removeItem(itemId) {
+    const item = state.library.find((entry) => entry.id === itemId);
+    if (!item || !confirm(`Remover "${item.title}" da biblioteca e das programações?`)) return;
+    mutate((current) => ({
+      ...current,
+      library: current.library.filter((entry) => entry.id !== itemId),
+      playlists: current.playlists.map((playlist) => ({
+        ...playlist,
+        entries: playlist.entries.filter((entry) => entry.itemId !== itemId),
+      })),
+    }));
+    if (selectedItemId === itemId) {
+      setSelectedItemId("");
+      setSelectedSlide(0);
+    }
+    if (live?.itemId === itemId) setLive(null);
+    setToast("Conteúdo removido");
+  }
+
   function createText() {
     const title = prompt("Título do conteúdo:");
     if (!title?.trim()) return;
@@ -423,12 +475,13 @@ function App() {
       const extension = filePath.split(".").at(-1).toLowerCase();
       const kind = ["mp4", "webm"].includes(extension) ? "video" : "image";
       const title = filePath.split(/[\\/]/).at(-1);
+      const url = await desktop?.toFileUrl(filePath);
       addItem({
         id: id(kind),
         kind,
         title,
         subtitle: kind === "video" ? "Vídeo local" : "Imagem local",
-        slides: [{ id: id("slide"), label: title, path: filePath }],
+        slides: [{ id: id("slide"), label: title, path: filePath, url }],
       });
     }
   }
@@ -484,7 +537,7 @@ function App() {
           <header className="panel-title"><div><small>CONTEÚDO</small><h2>Biblioteca</h2></div><button className="icon" onClick={createText}><Plus /></button></header>
           <label className="search"><Search /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar título ou trecho" /></label>
           <div className="filters">
-            {[["all", "Todos"], ["song", "Músicas"], ["bible", "Bíblia"], ["text", "Textos"]].map(([value, label]) =>
+            {[["all", "Todos"], ["song", "Músicas"], ["bible", "Bíblia"], ["text", "Textos"], ["image", "Imagens"], ["video", "Vídeos"]].map(([value, label]) =>
               <button className={filter === value ? "active" : ""} onClick={() => setFilter(value)} key={value}>{label}</button>
             )}
           </div>
@@ -494,7 +547,10 @@ function App() {
               <article className={selectedItemId === item.id ? "selected" : ""} key={item.id} onClick={() => { setSelectedItemId(item.id); setSelectedSlide(0); }}>
                 <div className={`kind ${item.kind}`}>{item.kind === "bible" ? <BookOpen /> : item.kind === "song" ? <Music2 /> : item.kind === "image" ? <Image /> : item.kind === "video" ? <Video /> : <FileText />}</div>
                 <div><strong>{item.title}</strong><span>{item.subtitle}</span></div>
-                <button onClick={(event) => { event.stopPropagation(); addToPlaylist(item.id); }}><Plus /></button>
+                <div className="item-actions">
+                  <button title="Adicionar à programação" onClick={(event) => { event.stopPropagation(); addToPlaylist(item.id); }}><Plus /></button>
+                  <button className="remove" title="Remover da biblioteca" onClick={(event) => { event.stopPropagation(); removeItem(item.id); }}><Trash2 /></button>
+                </div>
               </article>
             ))}
             {!filtered.length && <div className="empty-state"><Library /><strong>Biblioteca vazia</strong><span>Importe ou crie o primeiro conteúdo.</span></div>}
@@ -574,7 +630,15 @@ function App() {
           <section className="tool-card">
             <header><Clock3 /><div><strong>Contagem regressiva</strong><span>Exiba antes do início</span></div></header>
             <div className="timer">{formatTime(timerSeconds)}</div>
-            <div className="tool-actions"><button className="button ghost" onClick={() => setTimerRunning((v) => !v)}>{timerRunning ? "Pausar" : "Iniciar"}</button><button className="button primary" onClick={() => { setTimerVisible(true); setBlackout(false); }}>Exibir</button></div>
+            <label className="timer-input">Minutos
+              <input type="number" min="0" max="999" value={Math.floor(timerSeconds / 60)}
+                onChange={(event) => { setTimerRunning(false); setTimerSeconds(Math.max(0, Number(event.target.value) || 0) * 60); }} />
+            </label>
+            <div className="tool-actions">
+              <button className="button ghost" onClick={() => setTimerRunning((v) => !v)} disabled={!timerSeconds}>{timerRunning ? "Pausar" : "Iniciar"}</button>
+              <button className="button ghost" onClick={() => { setTimerRunning(false); setTimerSeconds(300); setTimerVisible(false); }}>Reiniciar</button>
+              <button className="button primary" onClick={() => { setTimerVisible((current) => !current); setBlackout(false); }}>{timerVisible ? "Ocultar" : "Exibir"}</button>
+            </div>
           </section>
           <section className="tool-card">
             <header><MessageSquareText /><div><strong>Alerta na tela</strong><span>Mensagem sem trocar slide</span></div></header>
