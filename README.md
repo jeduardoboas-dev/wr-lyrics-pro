@@ -2,6 +2,15 @@
 
 Primeira base funcional do aplicativo de projeção para Windows.
 
+## Versão 0.2.0
+
+- Atalhos: Enter exibe, setas navegam, B alterna a tela preta e Esc limpa sobreposições.
+- Relógio do retorno atualizado em tempo real.
+- Caminhos seguros para imagens e vídeos locais no Windows.
+- Filtros separados para imagens e vídeos.
+- Remoção segura de itens da biblioteca e das programações.
+- Cronômetro com ajuste de minutos, reinício e opção de ocultar.
+
 ## Recursos incluídos
 
 - Janela principal do operador.
@@ -27,14 +36,7 @@ npm install
 npm run dev
 ```
 
-## Baixar para Windows
-
-A versão pronta fica disponível na seção
-[Releases](https://github.com/jeduardoboas-dev/wr-lyrics-pro/releases).
-
-Baixe o arquivo `.exe` da versão mais recente e execute no Windows.
-
-## Gerar o aplicativo no Windows
+## Gerar instalador do Windows
 
 Execute em um computador Windows:
 
@@ -43,7 +45,8 @@ npm install
 npm run dist:win
 ```
 
-A versão portátil será gerada na pasta `dist`.
+O instalador e a versão portátil serão gerados na pasta `dist` ou `release`,
+conforme a configuração do electron-builder.
 
 ## Observações
 
