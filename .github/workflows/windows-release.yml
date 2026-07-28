@@ -1,9 +1,6 @@
 name: Windows Release
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -12,34 +9,5 @@ permissions:
 jobs:
   build-windows:
     runs-on: windows-latest
-
     steps:
-      - name: Baixar código
-        uses: actions/checkout@v4
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Instalar dependências
-        run: npm ci
-
-      - name: Validar código
-        run: npm run lint
-
-      - name: Gerar aplicativo portátil
-        run: npm run dist:win
-
-      - name: Publicar Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v0.1.0
-          name: WR Lyrics Pro v0.1.0
-          body: |
-            Primeira versão funcional para Windows.
-
-            Baixe o arquivo EXE, salve em uma pasta no computador e execute.
-          files: dist/*.exe
-          make_latest: true
+      - run: echo "Publicação temporariamente pausada durante a atualização."
