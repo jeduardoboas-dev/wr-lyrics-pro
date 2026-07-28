@@ -1,6 +1,6 @@
 {
   "name": "wr-lyrics-pro-windows",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Central de projeção para igrejas com operador, público e retorno.",
@@ -9,7 +9,7 @@
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "build": "vite build",
     "start": "electron .",
-    "dist:win": "npm run build && electron-builder --win portable",
+    "dist:win": "npm run build && electron-builder --win nsis portable",
     "lint": "eslint src electron"
   },
   "dependencies": {
