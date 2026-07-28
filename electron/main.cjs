@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain, screen, shell } = require("electron
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
+const { loadState, saveState } = require("./state-store.cjs");
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://127.0.0.1:5173";
 const outputWindows = new Map();
@@ -48,17 +49,10 @@ function statePath() {
   return path.join(app.getPath("userData"), "wr-lyrics-state.json");
 }
 
-ipcMain.handle("state:load", async () => {
-  try {
-    return JSON.parse(await fs.readFile(statePath(), "utf8"));
-  } catch {
-    return null;
-  }
-});
+ipcMain.handle("state:load", () => loadState(statePath()));
 
 ipcMain.handle("state:save", async (_event, state) => {
-  await fs.mkdir(path.dirname(statePath()), { recursive: true });
-  await fs.writeFile(statePath(), JSON.stringify(state, null, 2), "utf8");
+  await saveState(statePath(), state);
   return true;
 });
 
@@ -140,7 +134,18 @@ ipcMain.handle("external:louvorja", () =>
   shell.openExternal("https://app.louvorja.com.br/"),
 );
 
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) app.quit();
+
+app.on("second-instance", () => {
+  if (!operatorWindow) return;
+  if (operatorWindow.isMinimized()) operatorWindow.restore();
+  operatorWindow.show();
+  operatorWindow.focus();
+});
+
 app.whenReady().then(() => {
+  if (!hasSingleInstanceLock) return;
   createOperatorWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createOperatorWindow();
