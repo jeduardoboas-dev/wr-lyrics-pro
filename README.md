@@ -10,6 +10,10 @@ Primeira base funcional do aplicativo de projeção para Windows.
 - Filtros separados para imagens e vídeos.
 - Remoção segura de itens da biblioteca e das programações.
 - Cronômetro com ajuste de minutos, reinício e opção de ocultar.
+- Salvamento atômico com backup automático e recuperação de dados.
+- Bloqueio de abertura duplicada do aplicativo.
+- Testes automatizados de persistência executados antes da Release.
+- Executável acompanhado de checksum SHA-256 para conferência.
 
 ## Recursos incluídos
 
