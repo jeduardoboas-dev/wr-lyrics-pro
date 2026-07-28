@@ -302,18 +302,34 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [displays, setDisplays] = useState([]);
   const [toast, setToast] = useState("");
+  const [saveStatus, setSaveStatus] = useState("Salvo");
 
   useEffect(() => {
     Promise.all([desktop?.loadState(), desktop?.listDisplays()]).then(([saved, screens]) => {
-      setState(saved ? { ...emptyState, ...saved, settings: { ...emptyState.settings, ...saved.settings } } : emptyState);
+      const loaded = saved?.state || null;
+      setState(loaded ? { ...emptyState, ...loaded, settings: { ...emptyState.settings, ...loaded.settings } } : emptyState);
       setDisplays(screens || []);
       setReady(true);
+      if (saved?.recovered) setToast("Backup recuperado após detectar dados inválidos");
+    }).catch(() => {
+      setState(emptyState);
+      setReady(true);
+      setToast("Não foi possível carregar os dados. Uma base vazia foi aberta.");
     });
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    const timer = setTimeout(() => desktop?.saveState(state), 250);
+    setSaveStatus("Salvando…");
+    const timer = setTimeout(async () => {
+      try {
+        await desktop?.saveState(state);
+        setSaveStatus("Salvo");
+      } catch {
+        setSaveStatus("Falha ao salvar");
+        setToast("Falha ao salvar. Verifique o espaço disponível no computador.");
+      }
+    }, 350);
     return () => clearTimeout(timer);
   }, [ready, state]);
 
@@ -648,7 +664,7 @@ function App() {
         </aside>
       </div>
 
-      <footer className="status"><span><Radio size={9} /> Sistema pronto</span><small>Salvamento automático · Base local</small></footer>
+      <footer className="status"><span><Radio size={9} /> Sistema pronto</span><small>{saveStatus} · Base local com backup</small></footer>
 
       {bibleOpen && <BibleDialog onClose={() => setBibleOpen(false)} onCreate={addItem} />}
       {settingsOpen && (
