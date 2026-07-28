@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain, screen, shell } = require("electron");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://127.0.0.1:5173";
 const outputWindows = new Map();
@@ -131,6 +132,9 @@ ipcMain.handle("file:read-text", async (_event, filePath) => {
   }
   return fs.readFile(filePath, "utf8");
 });
+
+ipcMain.handle("file:to-url", (_event, filePath) =>
+  pathToFileURL(filePath).toString());
 
 ipcMain.handle("external:louvorja", () =>
   shell.openExternal("https://app.louvorja.com.br/"),
