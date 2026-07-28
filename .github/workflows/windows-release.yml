@@ -1,5 +1,5 @@
 name: Windows Release
-run-name: Compilar WR Lyrics Pro v0.2.0
+run-name: Validar e publicar WR Lyrics Pro v0.2.0
 
 on:
   push:
@@ -9,12 +9,17 @@ on:
       - .github/workflows/windows-release.yml
   workflow_dispatch:
 
+concurrency:
+  group: wr-lyrics-v0.2.0
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
 jobs:
-  build-windows:
+  validate-and-release:
     runs-on: windows-latest
+    timeout-minutes: 20
 
     steps:
       - name: Baixar código
@@ -26,14 +31,36 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Instalar dependências
+      - name: Instalar dependências de forma reproduzível
         run: npm ci
 
       - name: Validar código
         run: npm run lint
 
+      - name: Testar persistência e recuperação
+        run: npm test
+
       - name: Gerar aplicativo portátil
         run: npm run dist:win
+
+      - name: Validar executável e gerar checksum
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path dist -Filter *.exe | Select-Object -First 1
+          if (-not $exe) { throw "Executável não foi gerado." }
+          if ($exe.Length -lt 50MB) { throw "Executável gerado está incompleto." }
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($exe.Name)" | Set-Content "$($exe.FullName).sha256"
+
+      - name: Guardar artefato validado
+        uses: actions/upload-artifact@v4
+        with:
+          name: WR-Lyrics-Pro-v0.2.0
+          path: |
+            dist/*.exe
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Publicar Release
         uses: softprops/action-gh-release@v2
@@ -41,9 +68,15 @@ jobs:
           tag_name: v0.2.0
           name: WR Lyrics Pro v0.2.0
           body: |
-            Versão revisada com melhorias de estabilidade e operação.
+            Versão estabilizada com validação automatizada.
 
-            Inclui atalhos, cronômetro aprimorado, relógio de retorno em tempo real,
-            tratamento seguro de caminhos de mídia e remoção consistente de conteúdos.
-          files: dist/*.exe
+            Inclui salvamento atômico, backup e recuperação de dados, instância única,
+            atalhos de operação, cronômetro aprimorado, relógio de retorno em tempo real
+            e tratamento seguro de mídias locais.
+
+            O arquivo .sha256 permite conferir a integridade do executável.
+          files: |
+            dist/*.exe
+            dist/*.sha256
+          fail_on_unmatched_files: true
           make_latest: true
