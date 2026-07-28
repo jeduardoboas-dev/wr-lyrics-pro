@@ -10,7 +10,9 @@
     "build": "vite build",
     "start": "electron .",
     "dist:win": "npm run build && electron-builder --win portable",
-    "lint": "eslint src electron"
+    "lint": "eslint src electron test",
+    "test": "node --test test/*.test.cjs",
+    "verify": "npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -41,7 +43,6 @@
     ],
     "win": {
       "target": [
-        "nsis",
         "portable"
       ],
       "artifactName": "WR-Lyrics-Pro-${version}-${arch}.${ext}"
