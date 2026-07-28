@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("wrDesktop", {
   chooseFiles: (filters) => ipcRenderer.invoke("dialog:files", filters),
   chooseDirectory: () => ipcRenderer.invoke("dialog:directory"),
   readTextFile: (filePath) => ipcRenderer.invoke("file:read-text", filePath),
+  toFileUrl: (filePath) => ipcRenderer.invoke("file:to-url", filePath),
   openLouvorJa: () => ipcRenderer.invoke("external:louvorja"),
   onOutput: (callback) => {
     const listener = (_event, payload) => callback(payload);
