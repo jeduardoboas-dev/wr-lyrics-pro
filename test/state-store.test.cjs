@@ -13,7 +13,7 @@ test("normaliza dados incompletos sem perder a biblioteca", () => {
 });
 
 test("salva e carrega o estado de forma íntegra", async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "wr-lyrics-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "lyrics-pro-"));
   const filePath = path.join(directory, "state.json");
   await saveState(filePath, { library: [], playlists: [{ id: "p", entries: [] }] });
   const result = await loadState(filePath);
@@ -22,7 +22,7 @@ test("salva e carrega o estado de forma íntegra", async () => {
 });
 
 test("recupera o backup quando o arquivo principal está corrompido", async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "wr-lyrics-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "lyrics-pro-"));
   const filePath = path.join(directory, "state.json");
   await saveState(filePath, { library: [], playlists: [{ id: "p", entries: [] }] });
   await saveState(filePath, { library: [{ id: "backup" }], playlists: [{ id: "p", entries: [] }] });
